@@ -5,10 +5,13 @@ import (
 	"log"
 	"time"
 
+	pb "go-playground/proto"
+
 	"cloud.google.com/go/firestore"
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill-googlecloud/pkg/googlecloud"
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/golang/protobuf/proto"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 )
@@ -65,7 +68,16 @@ func main() {
 
 func publishMessages(publisher message.Publisher) {
 	for {
-		msg := message.NewMessage(watermill.NewUUID(), []byte(uuid.New().String()))
+		item := pb.Item{
+			Id:      uuid.New().String(),
+			Payload: "DATA: " + uuid.New().String(),
+		}
+		data, err := proto.Marshal(&item)
+		if err != nil {
+			panic(err)
+		}
+
+		msg := message.NewMessage(watermill.NewUUID(), data)
 
 		if err := publisher.Publish("example.topic", msg); err != nil {
 			panic(err)
@@ -79,9 +91,15 @@ func process(messages <-chan *message.Message, firestoreClient *firestore.Client
 	for msg := range messages {
 		log.Printf("received message: %s, payload: %s", msg.UUID, string(msg.Payload))
 
-		_, err := firestoreClient.Doc("Items/"+msg.UUID).Set(context.Background(), map[string]string{
-			"id":      msg.UUID,
-			"payload": string(msg.Payload),
+		item := pb.Item{}
+		err := proto.Unmarshal(msg.Payload, &item)
+		if err != nil {
+			panic(err)
+		}
+
+		_, err = firestoreClient.Doc("Items/"+msg.UUID).Set(context.Background(), map[string]string{
+			"id":      item.Id,
+			"payload": item.Payload,
 		})
 		if err != nil {
 			panic(err)

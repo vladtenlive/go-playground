@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 
 	"cloud.google.com/go/firestore"
 	"google.golang.org/api/iterator"
@@ -12,6 +13,10 @@ import (
 func main() {
 	ctx := context.Background()
 	projectID := "test-project"
+
+	if os.Getenv("FIRESTORE_EMULATOR_HOST") == "" {
+		os.Setenv("FIRESTORE_EMULATOR_HOST", "localhost:8084")
+	}
 
 	firestoreClient, err := firestore.NewClient(ctx, projectID)
 	if err != nil {
