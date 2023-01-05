@@ -1,0 +1,25 @@
+version: '3.9'
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+      - pubsub
+    environment:
+      - FIRESTORE_EMULATOR_HOST=db:8084
+      - PUBSUB_EMULATOR_HOST=pubsub:8085
+  db:
+    image: google/cloud-sdk:412.0.0
+    command: gcloud beta emulators firestore start --host-port=0.0.0.0:8084 --verbosity=debug --log-http
+    ports:
+      - 8084:8084
+
+  pubsub:
+    image: google/cloud-sdk:412.0.0
+    command: gcloud beta emulators pubsub start --host-port=0.0.0.0:8085 --verbosity=debug --log-http
+    ports:
+      - 8085:8085
